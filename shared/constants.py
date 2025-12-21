@@ -46,3 +46,9 @@ COLOR_HEALTH_BG = (60, 60, 60)        # bar background
 COLOR_HEALTH_FILL = (46, 204, 113)    # green health
 COLOR_HEALTH_BORDER = (0, 0, 0)       # outline
 
+# -------- BOSSES / ENEMIES --------
+BOSS_MOVE_SPEED = 180.0
+BOSS_MAX_HEALTH = 300
+BOSS_ATTACK_RANGE = 500.0
+BOSS_DAMAGE_PER_SECOND = 8.0
+COLOR_BOSS = (178, 34, 34)
