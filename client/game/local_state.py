@@ -86,6 +86,7 @@ class LocalState:
         self.missiles: List[Missile] = []
 
         # --- Cooldowns ---
+        self.q_cooldown_duration: float = Q_COOLDOWN  # seconds between Q casts
         self.q_cooldown_remaining: float = 0.0
 
         # --- Boss ---
@@ -288,7 +289,8 @@ class LocalState:
         self.missiles.append(missile)
 
         # Put Q on cooldown
-        self.q_cooldown_remaining = Q_COOLDOWN
+        # Reset Q cooldown (allows new missiles every cooldown, independent of existing ones)
+        self.q_cooldown_remaining = self.q_cooldown_duration
         return True
 
     def _update_missiles(self, dt: float) -> None:
