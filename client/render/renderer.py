@@ -20,6 +20,7 @@ from shared.constants import (
     COLOR_HEALTH_FILL,
     COLOR_HEALTH_BORDER,
     COLOR_BOSS,
+    BOSS_ATTACK_RANGE,
 )
 from shared.game_logic.isometric import grid_to_world, world_to_screen
 from client.game.local_state import LocalState
@@ -222,12 +223,28 @@ class Renderer:
             camera.y,
         )
 
+        # Draw damage radius ring (semi-transparent)
+        ring_radius = int(BOSS_ATTACK_RANGE)
+        ring_size = ring_radius * 2 + 4
+        ring_surface = pygame.Surface((ring_size, ring_size), pygame.SRCALPHA)
+        pygame.draw.circle(
+            ring_surface,
+            (255, 0, 0, 90),  # semi-transparent red
+            (ring_size // 2, ring_size // 2),
+            ring_radius,
+            width=2,
+        )
+        self.screen.blit(
+            ring_surface,
+            (int(screen_x - ring_size // 2), int(screen_y - ring_size // 2)),
+        )
+
         # Placeholder: draw a colored circle for the boss.
         pygame.draw.circle(
             self.screen,
             COLOR_BOSS,
             (int(screen_x), int(screen_y - 6)),
-            14,
+            18,
         )
 
         ratio = 0.0
