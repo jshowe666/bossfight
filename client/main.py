@@ -73,6 +73,8 @@ def main() -> None:
         # Camera panning (mouse at edges)
         mouse_x, mouse_y = pygame.mouse.get_pos()
         camera.update_for_mouse(mouse_x, mouse_y, dt)
+        if input_handler.center_on_player:
+            camera.center_on(state.player_world_x, state.player_world_y)
 
         # Update world (player movement along path)
         state.update(dt)
