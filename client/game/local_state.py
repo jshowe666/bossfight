@@ -21,6 +21,8 @@ from shared.constants import (
     BOSS_MAX_HEALTH,
     BOSS_ATTACK_RANGE,
     BOSS_DAMAGE_PER_SECOND,
+    BOSS_HIT_RADIUS,
+    Q_MISSILE_DAMAGE,
 )
 from shared.game_logic.isometric import grid_to_world
 from shared.game_logic.map_generation import create_grid, generate_water_patches
@@ -308,6 +310,15 @@ class LocalState:
 
             if missile.traveled >= missile.max_distance:
                 missile.active = False
+                continue
+
+            # Boss collision
+            if self.boss is not None:
+                bdx = missile.x - self.boss.x
+                bdy = missile.y - self.boss.y
+                if (bdx * bdx + bdy * bdy) <= (BOSS_HIT_RADIUS * BOSS_HIT_RADIUS):
+                    self._damage_boss(Q_MISSILE_DAMAGE)
+                    missile.active = False
 
         # Clean up inactive missiles
         self.missiles = [m for m in self.missiles if m.active]
@@ -394,3 +405,13 @@ class LocalState:
                         max_health=BOSS_MAX_HEALTH,
                     )
         return None
+
+    def _damage_boss(self, amount: float) -> None:
+        if self.boss is None:
+            return
+
+        self.boss.health = max(0.0, self.boss.health - amount)
+        if self.boss.health <= 0.0:
+            self.boss = None
+            self.boss_path = []
+            self.boss_path_index = 0
