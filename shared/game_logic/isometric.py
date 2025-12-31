@@ -52,3 +52,32 @@ def screen_to_grid(x_screen: float, y_screen: float, camera_x: float, camera_y: 
     row = (y_world / half_h - x_world / half_w) / 2.0
 
     return int(round(row)), int(round(col))
+
+
+def grid_world_bounds(rows: int, cols: int):
+    """
+    Compute an axis-aligned bounding box for an isometric grid.
+
+    This returns (min_x, max_x, min_y, max_y) in world coordinates and
+    expands the extents by half a tile so the outermost tiles stay visible
+    when the camera is clamped.
+    """
+    corners = (
+        grid_to_world(0, 0),
+        grid_to_world(rows - 1, 0),
+        grid_to_world(0, cols - 1),
+        grid_to_world(rows - 1, cols - 1),
+    )
+
+    xs = [x for x, _ in corners]
+    ys = [y for _, y in corners]
+
+    half_w = TILE_WIDTH // 2
+    half_h = TILE_HEIGHT // 2
+
+    min_x = min(xs) - half_w
+    max_x = max(xs) + half_w
+    min_y = min(ys) - half_h
+    max_y = max(ys) + half_h
+
+    return min_x, max_x, min_y, max_y
