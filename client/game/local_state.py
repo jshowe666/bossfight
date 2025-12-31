@@ -17,11 +17,17 @@ from shared.constants import (
     Q_MISSILE_RANGE,
     Q_COOLDOWN,
     MAX_PLAYER_HEALTH,
+    BOSS_MOVE_SPEED,
+    BOSS_MAX_HEALTH,
+    BOSS_ATTACK_RANGE,
+    BOSS_DAMAGE_PER_SECOND,
+    BOSS_HIT_RADIUS,
+    Q_MISSILE_DAMAGE,
 )
 from shared.game_logic.isometric import grid_to_world
 from shared.game_logic.map_generation import create_grid, generate_water_patches
 from shared.game_logic.pathfinding import dijkstra
-from shared.game_models import Missile
+from shared.game_models import Missile, Boss
 
 
 Grid = List[List[int]]
@@ -80,7 +86,13 @@ class LocalState:
         self.missiles: List[Missile] = []
 
         # --- Cooldowns ---
+        self.q_cooldown_duration: float = Q_COOLDOWN  # seconds between Q casts
         self.q_cooldown_remaining: float = 0.0
+
+        # --- Boss ---
+        self.boss: Optional[Boss] = self._spawn_boss()
+        self.boss_path: List[Cell] = []
+        self.boss_path_index: int = 0
 
     # ---------- Path / movement logic ----------
 
@@ -171,6 +183,55 @@ class LocalState:
             self.player_world_x += dx / dist * step
             self.player_world_y += dy / dist * step
 
+    def _update_boss_movement(self, dt: float) -> None:
+        """
+        Move the boss toward the player's current tile using pathfinding.
+        """
+        if self.boss is None:
+            return
+
+        target = (self.player_row, self.player_col)
+        if (not self.boss_path or
+                self.boss_path_index >= len(self.boss_path) - 1 or
+                self.boss_path[-1] != target):
+            self._recompute_boss_path(target)
+
+        if not self.boss_path or self.boss_path_index >= len(self.boss_path) - 1:
+            return
+
+        next_row, next_col = self.boss_path[self.boss_path_index + 1]
+        next_world_x, next_world_y = grid_to_world(next_row, next_col)
+
+        dx = next_world_x - self.boss.x
+        dy = next_world_y - self.boss.y
+
+        dist = (dx * dx + dy * dy) ** 0.5
+        if dist <= 0.0:
+            return
+
+        step = BOSS_MOVE_SPEED * dt
+        if step >= dist:
+            self.boss.x = next_world_x
+            self.boss.y = next_world_y
+            self.boss.row, self.boss.col = next_row, next_col
+            self.boss_path_index += 1
+        else:
+            self.boss.x += dx / dist * step
+            self.boss.y += dy / dist * step
+
+    def _recompute_boss_path(self, target: Cell) -> None:
+        if self.boss is None:
+            return
+
+        start = (self.boss.row, self.boss.col)
+        path = dijkstra(self.grid, start, target)
+        if path:
+            self.boss_path = path
+            self.boss_path_index = 0
+        else:
+            self.boss_path = []
+            self.boss_path_index = 0
+
     # ---------- Spells / missiles ----------
 
     def _direction_from_vector(self, dx: float, dy: float) -> str:
@@ -228,7 +289,8 @@ class LocalState:
         self.missiles.append(missile)
 
         # Put Q on cooldown
-        self.q_cooldown_remaining = Q_COOLDOWN
+        # Reset Q cooldown (allows new missiles every cooldown, independent of existing ones)
+        self.q_cooldown_remaining = self.q_cooldown_duration
         return True
 
     def _update_missiles(self, dt: float) -> None:
@@ -250,6 +312,15 @@ class LocalState:
 
             if missile.traveled >= missile.max_distance:
                 missile.active = False
+                continue
+
+            # Boss collision
+            if self.boss is not None:
+                bdx = missile.x - self.boss.x
+                bdy = missile.y - self.boss.y
+                if (bdx * bdx + bdy * bdy) <= (BOSS_HIT_RADIUS * BOSS_HIT_RADIUS):
+                    self._damage_boss(Q_MISSILE_DAMAGE)
+                    missile.active = False
 
         # Clean up inactive missiles
         self.missiles = [m for m in self.missiles if m.active]
@@ -263,6 +334,19 @@ class LocalState:
                 0.0, self.q_cooldown_remaining - dt
             )
 
+    def _update_boss_damage(self, dt: float) -> None:
+        """
+        Apply boss damage to the player if within range.
+        """
+        if self.boss is None:
+            return
+
+        dx = self.boss.x - self.player_world_x
+        dy = self.boss.y - self.player_world_y
+        dist_sq = dx * dx + dy * dy
+        if dist_sq <= BOSS_ATTACK_RANGE * BOSS_ATTACK_RANGE:
+            self.health = max(0.0, self.health - BOSS_DAMAGE_PER_SECOND * dt)
+
     # ---------- Frame update ----------
 
     def update(self, dt: float) -> None:
@@ -275,6 +359,8 @@ class LocalState:
         self._update_player_movement(dt)
         self._update_missiles(dt)
         self._update_cooldowns(dt)
+        self._update_boss_movement(dt)
+        self._update_boss_damage(dt)
 
     # ---------- Helpers ----------
 
@@ -285,3 +371,49 @@ class LocalState:
         if not (0 <= row < self.grid_rows and 0 <= col < self.grid_cols):
             return False
         return self.grid[row][col] == 0
+
+    # ---------- Boss helpers ----------
+
+    def _spawn_boss(self) -> Optional[Boss]:
+        """
+        Place the boss somewhere along the bottom row (searching upward if blocked).
+        """
+        bottom_row = self.grid_rows - 1
+        start_col = self.grid_cols // 2
+
+        for row in range(bottom_row, -1, -1):
+            for col in range(start_col, self.grid_cols):
+                if self.is_walkable(row, col):
+                    world_x, world_y = grid_to_world(row, col)
+                    return Boss(
+                        row=row,
+                        col=col,
+                        x=world_x,
+                        y=world_y,
+                        speed=BOSS_MOVE_SPEED,
+                        health=BOSS_MAX_HEALTH,
+                        max_health=BOSS_MAX_HEALTH,
+                    )
+            for col in range(start_col - 1, -1, -1):
+                if self.is_walkable(row, col):
+                    world_x, world_y = grid_to_world(row, col)
+                    return Boss(
+                        row=row,
+                        col=col,
+                        x=world_x,
+                        y=world_y,
+                        speed=BOSS_MOVE_SPEED,
+                        health=BOSS_MAX_HEALTH,
+                        max_health=BOSS_MAX_HEALTH,
+                    )
+        return None
+
+    def _damage_boss(self, amount: float) -> None:
+        if self.boss is None:
+            return
+
+        self.boss.health = max(0.0, self.boss.health - amount)
+        if self.boss.health <= 0.0:
+            self.boss = None
+            self.boss_path = []
+            self.boss_path_index = 0

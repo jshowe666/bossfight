@@ -14,11 +14,13 @@ from shared.constants import (
     COLOR_PLAYER,      # still handy if you ever want circle fallback
     COLOR_Q_MISSILE,
     Q_MISSILE_RADIUS,  # unused now but kept in case you want circles again
-    HEALTH_BAR_WIDTH,  # <---
-    HEALTH_BAR_HEIGHT,  # <---
-    COLOR_HEALTH_BG,  # <---
-    COLOR_HEALTH_FILL,  # <---
-    COLOR_HEALTH_BORDER,  # <---
+    HEALTH_BAR_WIDTH,
+    HEALTH_BAR_HEIGHT,
+    COLOR_HEALTH_BG,
+    COLOR_HEALTH_FILL,
+    COLOR_HEALTH_BORDER,
+    COLOR_BOSS,
+    BOSS_ATTACK_RANGE,
 )
 from shared.game_logic.isometric import grid_to_world, world_to_screen
 from client.game.local_state import LocalState
@@ -29,6 +31,7 @@ from client.render.sprite_loader import (
     load_missile_sprites,
     MissileSprites,
 )
+from client.render.ui import HealthBarRenderer
 
 
 class Renderer:
@@ -45,6 +48,13 @@ class Renderer:
         self.player_sprites: PlayerSprites = load_player_sprites()
         # Load missile directional sprites
         self.missile_sprites: MissileSprites = load_missile_sprites()
+        self.health_bar = HealthBarRenderer(
+            width=HEALTH_BAR_WIDTH,
+            height=HEALTH_BAR_HEIGHT,
+            bg_color=COLOR_HEALTH_BG,
+            fill_color=COLOR_HEALTH_FILL,
+            border_color=COLOR_HEALTH_BORDER,
+        )
 
     def render(self, state: LocalState, camera: Camera) -> None:
         """
@@ -55,6 +65,7 @@ class Renderer:
         self._draw_tiles(state, camera)
         self._draw_path(state, camera)
         self._draw_missiles(state, camera)
+        self._draw_boss(state, camera)
         self._draw_player(state, camera)
 
     # ---------- Internal helpers ----------
@@ -195,33 +206,50 @@ class Renderer:
         if state.max_health > 0:
             ratio = max(0.0, min(1.0, state.health / state.max_health))
 
-        bar_width = HEALTH_BAR_WIDTH
-        bar_height = HEALTH_BAR_HEIGHT
+        bar_y = draw_y - HEALTH_BAR_HEIGHT - 4  # a bit above the sprite
+        self.health_bar.draw(self.screen, screen_x, bar_y, ratio)
 
-        # Position bar above the sprite's head
-        bar_x = int(screen_x - bar_width / 2)
-        bar_y = draw_y - bar_height - 4  # a bit above the sprite
+    def _draw_boss(self, state: LocalState, camera: Camera) -> None:
+        """
+        Draw the chasing boss with a health bar.
+        """
+        if state.boss is None:
+            return
 
-        # Background
-        pygame.draw.rect(
-            self.screen,
-            COLOR_HEALTH_BG,
-            (bar_x, bar_y, bar_width, bar_height),
+        screen_x, screen_y = world_to_screen(
+            state.boss.x,
+            state.boss.y,
+            camera.x,
+            camera.y,
         )
 
-        # Fill (current health)
-        fill_width = int((bar_width - 2) * ratio)
-        if fill_width > 0:
-            pygame.draw.rect(
-                self.screen,
-                COLOR_HEALTH_FILL,
-                (bar_x + 1, bar_y + 1, fill_width, bar_height - 2),
-            )
-
-        # Border
-        pygame.draw.rect(
-            self.screen,
-            COLOR_HEALTH_BORDER,
-            (bar_x, bar_y, bar_width, bar_height),
-            1,
+        # Draw damage radius ring (semi-transparent)
+        ring_radius = int(BOSS_ATTACK_RANGE)
+        ring_size = ring_radius * 2 + 4
+        ring_surface = pygame.Surface((ring_size, ring_size), pygame.SRCALPHA)
+        pygame.draw.circle(
+            ring_surface,
+            (255, 0, 0, 90),  # semi-transparent red
+            (ring_size // 2, ring_size // 2),
+            ring_radius,
+            width=2,
         )
+        self.screen.blit(
+            ring_surface,
+            (int(screen_x - ring_size // 2), int(screen_y - ring_size // 2)),
+        )
+
+        # Placeholder: draw a colored circle for the boss.
+        pygame.draw.circle(
+            self.screen,
+            COLOR_BOSS,
+            (int(screen_x), int(screen_y - 6)),
+            18,
+        )
+
+        ratio = 0.0
+        if state.boss.max_health > 0:
+            ratio = max(0.0, min(1.0, state.boss.health / state.boss.max_health))
+
+        bar_y = screen_y - 30
+        self.health_bar.draw(self.screen, screen_x, bar_y, ratio)

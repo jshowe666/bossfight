@@ -28,3 +28,24 @@ class Missile:
     traveled: float = 0.0
     active: bool = True
     direction: str = "right"
+
+
+@dataclass
+class Boss:
+    """
+    Simple chasing enemy boss that walks toward the player and deals
+    damage when close.
+
+    - (row, col): current grid position
+    - (x, y): current world position (isometric)
+    - health / max_health: boss vitality
+    - speed: world units per second
+    """
+
+    row: int
+    col: int
+    x: float
+    y: float
+    speed: float
+    health: float
+    max_health: float

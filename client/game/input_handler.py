@@ -20,6 +20,9 @@ class InputHandler:
     Handles pygame events and translates them into game actions.
     """
 
+    def __init__(self) -> None:
+        self.center_on_player: bool = False
+
     def process_events(self, state: LocalState, camera: Camera) -> bool:
         """
         Process all pygame events for this frame.
@@ -36,8 +39,12 @@ class InputHandler:
                 if event.key == pygame.K_SPACE:
                     # Center camera on player
                     camera.center_on(state.player_world_x, state.player_world_y)
+                    self.center_on_player = True
                 if event.key == pygame.K_q:
                     self._handle_q_cast(state, camera)
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_SPACE:
+                    self.center_on_player = False
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:  # Right click
                 mouse_x, mouse_y = event.pos
