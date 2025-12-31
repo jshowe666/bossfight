@@ -9,21 +9,25 @@ Local game state for the client:
 
 from typing import List, Tuple, Optional
 
-from shared.constants import (
-    DEFAULT_GRID_ROWS,
-    DEFAULT_GRID_COLS,
-    PLAYER_MOVE_SPEED,
-    Q_MISSILE_SPEED,
+    from shared.constants import (
+        DEFAULT_GRID_ROWS,
+        DEFAULT_GRID_COLS,
+        PLAYER_MOVE_SPEED,
+        Q_MISSILE_SPEED,
     Q_MISSILE_RANGE,
     Q_COOLDOWN,
     MAX_PLAYER_HEALTH,
     BOSS_MOVE_SPEED,
     BOSS_MAX_HEALTH,
     BOSS_ATTACK_RANGE,
-    BOSS_DAMAGE_PER_SECOND,
-    BOSS_HIT_RADIUS,
-    Q_MISSILE_DAMAGE,
-)
+        BOSS_DAMAGE_PER_SECOND,
+        BOSS_HIT_RADIUS,
+        Q_MISSILE_DAMAGE,
+        TILE_WIDTH,
+        TILE_HEIGHT,
+        MOVEMENT_BASE_TILE_WIDTH,
+        MOVEMENT_BASE_TILE_HEIGHT,
+    )
 from shared.game_logic.isometric import grid_to_world, grid_world_bounds
 from shared.game_logic.map_generation import create_grid, generate_water_patches
 from shared.game_logic.pathfinding import dijkstra
@@ -66,6 +70,13 @@ class LocalState:
             min_size=water_min_size,
             max_size=water_max_size,
         )
+
+        tile_scale = max(
+            TILE_WIDTH / MOVEMENT_BASE_TILE_WIDTH,
+            TILE_HEIGHT / MOVEMENT_BASE_TILE_HEIGHT,
+        )
+        self.player_move_speed = PLAYER_MOVE_SPEED * tile_scale
+        self.boss_move_speed = BOSS_MOVE_SPEED * tile_scale
 
         # --- Player setup (starts at (0, 0)) ---
         self.player_row: int = 0
@@ -173,7 +184,7 @@ class LocalState:
         if dist <= 0.0:
             return
 
-        step = PLAYER_MOVE_SPEED * dt
+        step = self.player_move_speed * dt
 
         if step >= dist:
             # Snap to tile center
@@ -212,7 +223,7 @@ class LocalState:
         if dist <= 0.0:
             return
 
-        step = BOSS_MOVE_SPEED * dt
+        step = self.boss_move_speed * dt
         if step >= dist:
             self.boss.x = next_world_x
             self.boss.y = next_world_y
@@ -393,7 +404,7 @@ class LocalState:
                         col=col,
                         x=world_x,
                         y=world_y,
-                        speed=BOSS_MOVE_SPEED,
+                        speed=self.boss_move_speed,
                         health=BOSS_MAX_HEALTH,
                         max_health=BOSS_MAX_HEALTH,
                     )
@@ -405,7 +416,7 @@ class LocalState:
                         col=col,
                         x=world_x,
                         y=world_y,
-                        speed=BOSS_MOVE_SPEED,
+                        speed=self.boss_move_speed,
                         health=BOSS_MAX_HEALTH,
                         max_health=BOSS_MAX_HEALTH,
                     )

@@ -13,11 +13,16 @@ DEFAULT_GRID_ROWS = 150
 DEFAULT_GRID_COLS = 150
 
 # -------- CAMERA --------
-EDGE_MARGIN = 30           # px from edge that triggers panning
-CAMERA_PAN_SPEED = 1800.0  # px per second
+EDGE_MARGIN = 30            # px from edge that triggers panning
+CAMERA_PAN_SPEED = 1800.0   # px per second
+CAMERA_BOUND_PADDING = 120  # extra px outside the map the camera can pan into
 
 # -------- MOVEMENT --------
 PLAYER_MOVE_SPEED = 500.0  # world px / second
+
+# Movement scaling adapts to tile detail so traversing a tile keeps the same tempo
+MOVEMENT_BASE_TILE_WIDTH = 16
+MOVEMENT_BASE_TILE_HEIGHT = 8
 
 # -------- SPELLS / PROJECTILES --------
 # Ezreal-Q-style missile

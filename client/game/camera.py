@@ -2,7 +2,7 @@
 Camera logic for panning around the isometric map.
 """
 
-from shared.constants import EDGE_MARGIN, CAMERA_PAN_SPEED
+from shared.constants import EDGE_MARGIN, CAMERA_PAN_SPEED, CAMERA_BOUND_PADDING
 
 
 class Camera:
@@ -58,10 +58,10 @@ class Camera:
         """
         Clamp camera offsets so the view never scrolls beyond the board edges.
         """
-        min_cam_x = self.screen_width - self.max_world_x
-        max_cam_x = -self.min_world_x
-        min_cam_y = self.screen_height - self.max_world_y
-        max_cam_y = -self.min_world_y
+        min_cam_x = self.screen_width - self.max_world_x - CAMERA_BOUND_PADDING
+        max_cam_x = -self.min_world_x + CAMERA_BOUND_PADDING
+        min_cam_y = self.screen_height - self.max_world_y - CAMERA_BOUND_PADDING
+        max_cam_y = -self.min_world_y + CAMERA_BOUND_PADDING
 
         # If the map is smaller than the viewport, lock to the center.
         if min_cam_x > max_cam_x:
