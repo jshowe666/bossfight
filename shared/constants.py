@@ -9,22 +9,29 @@ TILE_WIDTH = 16       # pixel width of an isometric tile
 TILE_HEIGHT = 8      # pixel height of an isometric tile
 
 # -------- MAP SIZE (defaults; client can override for fullscreen) --------
-DEFAULT_GRID_ROWS = 100
-DEFAULT_GRID_COLS = 100
+DEFAULT_GRID_ROWS = 150
+DEFAULT_GRID_COLS = 150
 
 # -------- CAMERA --------
 EDGE_MARGIN = 30           # px from edge that triggers panning
 CAMERA_PAN_SPEED = 1800.0  # px per second
+# Extra slack so the camera can pan slightly beyond the map while
+# still keeping the board in view
+CAMERA_BOUND_MARGIN = 120
 
 # -------- MOVEMENT --------
 PLAYER_MOVE_SPEED = 500.0  # world px / second
+# Baseline grid dimension used to scale movement speed so movement
+# doesn't feel sluggish on more detailed maps
+PLAYER_SPEED_GRID_BASE = 100
 
 # -------- SPELLS / PROJECTILES --------
 # Ezreal-Q-style missile
 Q_MISSILE_SPEED = 900.0      # world px / second
 Q_MISSILE_RANGE = 1000.0     # max distance before despawn
 Q_MISSILE_RADIUS = 4         # pixels (for drawing)
-Q_COOLDOWN = 1.0             # seconds
+# Shorter cooldown so multiple missiles can be in-flight at once
+Q_COOLDOWN = 0.25            # seconds
 
 # -------- COLORS --------
 COLOR_BACKGROUND = (30, 30, 30)

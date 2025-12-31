@@ -46,7 +46,9 @@ def main() -> None:
     state = LocalState(
         rows=DEFAULT_GRID_ROWS,
         cols=DEFAULT_GRID_COLS,
-        water_patches=80,
+        water_patches=2,
+        water_min_size=2,
+        water_max_size=5,
         rng_seed=1,
     )
 
@@ -55,6 +57,7 @@ def main() -> None:
         screen_height=screen_height,
         player_world_x=state.player_world_x,
         player_world_y=state.player_world_y,
+        world_bounds=state.world_bounds,
     )
 
     renderer = Renderer(screen, screen_width, screen_height)

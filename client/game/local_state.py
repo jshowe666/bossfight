@@ -23,8 +23,9 @@ from shared.constants import (
     BOSS_DAMAGE_PER_SECOND,
     BOSS_HIT_RADIUS,
     Q_MISSILE_DAMAGE,
+    PLAYER_SPEED_GRID_BASE,
 )
-from shared.game_logic.isometric import grid_to_world
+from shared.game_logic.isometric import grid_to_world, grid_world_bounds
 from shared.game_logic.map_generation import create_grid, generate_water_patches
 from shared.game_logic.pathfinding import dijkstra
 from shared.game_models import Missile, Boss
@@ -49,22 +50,27 @@ class LocalState:
         self,
         rows: int = DEFAULT_GRID_ROWS,
         cols: int = DEFAULT_GRID_COLS,
-        water_patches: int = 120,
+        water_patches: int = 2,
+        water_min_size: int = 2,
+        water_max_size: int = 5,
         rng_seed: Optional[int] = 1,
     ):
         # --- Grid setup ---
         self.grid_rows = rows
         self.grid_cols = cols
+        self.world_bounds = grid_world_bounds(rows, cols)
+        self._movement_speed_scale = max(1.0, max(rows, cols) / PLAYER_SPEED_GRID_BASE)
 
         self.grid: Grid = create_grid(rows, cols, seed=rng_seed)
         generate_water_patches(
             self.grid,
             num_patches=water_patches,
-            min_size=5,
-            max_size=20,
+            min_size=water_min_size,
+            max_size=water_max_size,
         )
 
         # --- Player setup (starts at (0, 0)) ---
+        self.player_move_speed = PLAYER_MOVE_SPEED * self._movement_speed_scale
         self.player_row: int = 0
         self.player_col: int = 0
         self.player_world_x, self.player_world_y = grid_to_world(
@@ -90,6 +96,7 @@ class LocalState:
         self.q_cooldown_remaining: float = 0.0
 
         # --- Boss ---
+        self.boss_move_speed = BOSS_MOVE_SPEED * self._movement_speed_scale
         self.boss: Optional[Boss] = self._spawn_boss()
         self.boss_path: List[Cell] = []
         self.boss_path_index: int = 0
@@ -170,7 +177,7 @@ class LocalState:
         if dist <= 0.0:
             return
 
-        step = PLAYER_MOVE_SPEED * dt
+        step = self.player_move_speed * dt
 
         if step >= dist:
             # Snap to tile center
@@ -209,7 +216,7 @@ class LocalState:
         if dist <= 0.0:
             return
 
-        step = BOSS_MOVE_SPEED * dt
+        step = self.boss_move_speed * dt
         if step >= dist:
             self.boss.x = next_world_x
             self.boss.y = next_world_y
